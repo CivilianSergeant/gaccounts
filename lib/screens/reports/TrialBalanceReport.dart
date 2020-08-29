@@ -515,7 +515,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
     List<Map<String,dynamic>> childAccounts = await chartAccService.getChildAccounts();
     String startDate=fromDate.text;
     String endDate = toDate.text;
-    Map<String,dynamic> results = await masterService.getTrialBalance(startDate, endDate);
+    Map<String,dynamic> results = await masterService.getAccountsBalance(startDate, endDate);
     List<Map<String,dynamic>> currentResults = results['current'];
     List<Map<String,dynamic>> prevResults = results['prev'];
 

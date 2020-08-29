@@ -156,7 +156,7 @@ class AccTrxMasterService extends NetworkService{
     return prevMonth;
   }
 
-  Future<Map<String,dynamic>> getTrialBalance(String startDate, String endDate) async{
+  Future<Map<String,dynamic>> getAccountsBalance(String startDate, String endDate) async{
     String sql ="SELECT atm.*, SUM(atd.credit) as credit , SUM(atd.debit) debit,ca.acc_code from ${masterRepo.tableName} atm"
         " JOIN ${detailRepository.tableName} atd ON atd.trx_master_id = atm.trx_master_id"
         " JOIN chart_accounts ca ON ca.acc_id = atd.acc_id"

@@ -39,13 +39,13 @@ class ChartAccountService extends NetworkService{
 
   Future<List<Map<String,dynamic>>> getIncomeAccounts() async{
     Database db = await repo.getDBInstance();
-    String sql="SELECT * FROM ${repo.tableName} WHERE first_level=9 AND nature=2";
+    String sql="SELECT * FROM ${repo.tableName} WHERE acc_level=3 AND first_level=9 AND nature=2";
     return db.rawQuery(sql);
   }
 
   Future<List<Map<String,dynamic>>> getExpenseAccounts() async{
     Database db = await repo.getDBInstance();
-    String sql="SELECT * FROM ${repo.tableName} WHERE first_level=5 AND nature=3";
+    String sql="SELECT * FROM ${repo.tableName} WHERE acc_level=3 AND first_level=5 AND nature=3";
     return db.rawQuery(sql);
   }
 

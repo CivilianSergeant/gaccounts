@@ -2,8 +2,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gaccounts/persistance/entity/Amount.dart';
 import 'package:gaccounts/persistance/entity/User.dart';
+import 'package:gaccounts/persistance/repository/AccTrxMasterRepository.dart';
+import 'package:gaccounts/persistance/repository/ChartAccountRepository.dart';
 import 'package:gaccounts/persistance/repository/UserRepository.dart';
+import 'package:gaccounts/persistance/services/AccTrxMasterService.dart';
+import 'package:gaccounts/persistance/services/ChartAccountService.dart';
 import 'package:gaccounts/persistance/services/UserService.dart';
 import 'package:gaccounts/screens/reports/PdfViewer.dart';
 import 'package:gaccounts/widgets/ActionButton.dart';
@@ -167,6 +172,66 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
     );
   }
 
+  SectionItemRow(String code,String accName, double prev, double current, double toDate){
+    return pw.TableRow(
+        children: <pw.Widget>[
+          pw.Container(
+              width: 40,
+              margin: pw.EdgeInsets.only(top: 10),
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${code}")
+          ),
+          pw.Container(
+              width: 100,
+              margin: pw.EdgeInsets.only(top: 10),
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${accName}")
+          ),
+          pw.Container(
+              width:40,
+              margin: pw.EdgeInsets.only(top: 10),
+              alignment: pw.Alignment.centerRight,
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${prev.toString()}")
+          ),
+          pw.Container(
+              width: 40,
+              margin: pw.EdgeInsets.only(top: 10),
+              alignment: pw.Alignment.centerRight,
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${current.toString()}")
+          ),
+          pw.Container(
+              width: 40,
+              margin: pw.EdgeInsets.only(top: 10),
+              alignment: pw.Alignment.centerRight,
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${toDate.toString()}")
+          ),
+        ]
+    );
+  }
+
   SectionHeader(String caption){
     return pw.TableRow(
       children: <pw.Widget>[
@@ -226,7 +291,7 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
     );
   }
 
-  TotalRow(String caption){
+  TotalRow(String caption,double totalPrev, double totalCur, double totalToDate){
     return pw.TableRow(
         children: <pw.Widget>[
           pw.Container(
@@ -253,7 +318,7 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
                     bottom: true
                   )
               ),
-              child: pw.Text("0.00")
+              child: pw.Text("${totalPrev}")
           ),
           pw.Container(
               width: 40,
@@ -265,7 +330,7 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
                     bottom: true
                   )
               ),
-              child: pw.Text("0.00")
+              child: pw.Text("${totalCur}")
           ),
           pw.Container(
               width: 40,
@@ -278,13 +343,13 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
                       bottom: true
                   )
               ),
-              child: pw.Text("0.00")
+              child: pw.Text("${totalToDate}")
           ),
         ]
     );
   }
 
-  NetTotalRow(){
+  NetTotalRow(String prev, String current, String balance){
     return pw.TableRow(
         children: <pw.Widget>[
           pw.Container(
@@ -324,7 +389,7 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
                       bottom: true
                   )
               ),
-              child: pw.Text("0.00")
+              child: pw.Text("${prev}")
           ),
           pw.Container(
               width: 40,
@@ -336,7 +401,7 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
                       bottom: true
                   )
               ),
-              child: pw.Text("0.00")
+              child: pw.Text("${current}")
           ),
           pw.Container(
               width: 40,
@@ -350,20 +415,105 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
                     right: true
                   )
               ),
-              child: pw.Text("0.00")
+              child: pw.Text("${balance}")
           ),
         ]
     );
   }
 
   Future<void> GenerateRow() async{
+    ChartAccountService chartAccService = ChartAccountService(repo: ChartAccountRepository());
+    AccTrxMasterService masterService = AccTrxMasterService(masterRepo: AccTrxMasterRepository());
+
+    List<Map<String,dynamic>> incomeAccounts = await chartAccService.getIncomeAccounts();
+    List<Map<String,dynamic>> expenseAccounts = await chartAccService.getExpenseAccounts();
+
+    String startDate=fromDate.text;
+    String endDate = toDate.text;
+    Map<String,dynamic> results = await masterService.getAccountsBalance(startDate, endDate);
+    List<Map<String,dynamic>> currentResults = results['current'];
+    List<Map<String,dynamic>> prevResults = results['prev'];
+
+    double totalPrevIncome = 0;
+    double totalPrevExpense = 0;
+    double totalCurIncome = 0;
+    double totalCurExpense = 0;
+    double totalBalanceIncome=0;
+    double totalBalanceExpense=0;
+
+
     rows.add(TitleBar());
     rows.add(SectionHeader("Income"));
-    rows.add(TotalRow("Total Income"));
+    incomeAccounts.forEach((childElement) {
+
+      Map<String,dynamic> current = {};
+      Map<String,dynamic> prev = {};
+      currentResults.forEach((ce) {
+
+        if(childElement['acc_code'] == ce['acc_code']){
+          current = ce;
+        }
+      });
+      prevResults.forEach((_prev) {
+        if(childElement['acc_code'] == _prev['acc_code']){
+          prev = _prev;
+        }
+      });
+
+      double prevCredit = (prev['credit']!=null)? prev['credit']: 0;
+      double prevDebit = (prev['debit']!=null)? prev['debit']:0;
+      double currentCredit = (current['credit']!=null)? current['credit']: 0;
+      double currentDebit = (current['debit']!=null)? current['debit']:0;
+
+      double prevAmount = prevCredit - prevDebit;
+      totalPrevIncome += prevAmount;
+      double currentAmount = currentCredit - currentDebit;
+      totalCurIncome += currentAmount;
+      double balance = (prevAmount + currentAmount);
+      totalBalanceIncome+= balance;
+      rows.add(SectionItemRow(childElement['acc_code'],childElement['acc_name'],prevAmount,currentAmount,balance));
+    });
+
+    rows.add(TotalRow("Total Income",totalPrevIncome,totalCurIncome,totalBalanceIncome));
 
     rows.add(SectionHeader("Expense"));
-    rows.add(TotalRow("Total Expense"));
-    rows.add(NetTotalRow());
+    expenseAccounts.forEach((childElement) {
+      Map<String,dynamic> current = {};
+      Map<String,dynamic> prev = {};
+      currentResults.forEach((ce) {
+
+        if(childElement['acc_code'] == ce['acc_code']){
+          current = ce;
+        }
+      });
+      prevResults.forEach((_prev) {
+        if(childElement['acc_code'] == _prev['acc_code']){
+          prev = _prev;
+        }
+      });
+      double prevCredit = (prev['credit']!=null)? prev['credit']: 0;
+      double prevDebit = (prev['debit']!=null)? prev['debit']:0;
+      double currentCredit = (current['credit']!=null)? current['credit']: 0;
+      double currentDebit = (current['debit']!=null)? current['debit']:0;
+
+      double prevAmount = prevCredit - prevDebit;
+      totalPrevExpense+= prevAmount;
+      double currentAmount = currentCredit - currentDebit;
+      totalCurExpense += currentAmount;
+      double balance = (prevAmount + currentAmount);
+      totalBalanceExpense += balance;
+      rows.add(SectionItemRow(childElement['acc_code'],childElement['acc_name'],prevAmount,currentAmount,balance));
+    });
+
+    rows.add(TotalRow("Total Expense",totalPrevExpense,totalCurExpense,totalBalanceExpense));
+    double prevNetAmount = (totalPrevIncome-totalPrevExpense);
+    double currentNetAmount = (totalCurIncome-totalCurExpense);
+    double balanceNetAmount = (totalBalanceIncome-totalBalanceExpense);
+    rows.add(NetTotalRow(
+        (prevNetAmount<0)? "(${prevNetAmount.abs()})":"${prevNetAmount}",
+        (currentNetAmount<0)? "(${currentNetAmount.abs()})": "${currentNetAmount}",
+        (balanceNetAmount<0)? "(${currentNetAmount.abs()})" : "${balanceNetAmount}"
+    ));
   }
 
   Future<void> GenerateReport() async{
