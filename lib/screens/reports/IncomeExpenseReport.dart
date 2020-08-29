@@ -356,7 +356,7 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
     );
   }
 
-  GenerateRow(){
+  Future<void> GenerateRow() async{
     rows.add(TitleBar());
     rows.add(SectionHeader("Income"));
     rows.add(TotalRow("Total Income"));
@@ -367,11 +367,12 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
   }
 
   Future<void> GenerateReport() async{
+    await GenerateRow();
     pdf.addPage(pw.MultiPage(
       margin: pw.EdgeInsets.all(10),
       pageFormat: PdfPageFormat.a4,
       build:(pw.Context context){
-        GenerateRow();
+
         return <pw.Widget>[
           pw.SizedBox(height: 40),
           pw.Row(

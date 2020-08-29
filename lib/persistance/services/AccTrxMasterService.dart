@@ -147,5 +147,43 @@ class AccTrxMasterService extends NetworkService{
     Database db = await masterRepo.getDBInstance();
     return await db.rawQuery(sql);
   }
+  
+  String _getPrevMonth(String startDate){
+    DateTime dt = DateTime.parse(startDate);
+    int month = (dt.month-1);
+    month = (month<1)? 12 :month;
+    String prevMonth = (month<10)? '0'+(month).toString() : (month).toString();
+    return prevMonth;
+  }
+
+  Future<Map<String,dynamic>> getTrialBalance(String startDate, String endDate) async{
+    String sql ="SELECT atm.*, SUM(atd.credit) as credit , SUM(atd.debit) debit,ca.acc_code from ${masterRepo.tableName} atm"
+        " JOIN ${detailRepository.tableName} atd ON atd.trx_master_id = atm.trx_master_id"
+        " JOIN chart_accounts ca ON ca.acc_id = atd.acc_id"
+        " WHERE strftime('%s',atm.trx_date) <= strftime('%s','${endDate}') "
+        " AND strftime('%s',atm.trx_date) > strftime('%s','${startDate}')"
+        " GROUP BY atd.acc_id";
+
+    DateTime dt = DateTime.parse(startDate);
+    int year = dt.month;
+    String prevMonth = _getPrevMonth(startDate);
+    AppConfig.log(prevMonth,line:"161",className: "AccTrxMasterService");
+
+    String sql1 ="SELECT atm.*, SUM(atd.credit) as credit , SUM(atd.debit) debit,ca.acc_code from ${masterRepo.tableName} atm"
+        " JOIN ${detailRepository.tableName} atd ON atd.trx_master_id = atm.trx_master_id"
+        " JOIN chart_accounts ca ON ca.acc_id = atd.acc_id"
+        " WHERE atm.trx_date like '${year}-${prevMonth}%'"
+        " GROUP BY atd.acc_id";
+
+    Database db = await masterRepo.getDBInstance();
+    List<Map<String,dynamic>> currenResults =  await db.rawQuery(sql);
+    List<Map<String,dynamic>> prevResults = await db.rawQuery(sql1);
+
+    currenResults.forEach((element) {
+//      AppConfig.log(element,line:"161",className: "AccTrxMasterService");
+    });
+    return {'current':currenResults,'prev':prevResults};
+       // " AND atm.voucher_type in ('cash-purchase','cash-sale','received','payment','bank')";
+  }
 
 }

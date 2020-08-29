@@ -37,6 +37,18 @@ class ChartAccountService extends NetworkService{
     return db.rawQuery(sql);
   }
 
+  Future<List<Map<String,dynamic>>> getIncomeAccounts() async{
+    Database db = await repo.getDBInstance();
+    String sql="SELECT * FROM ${repo.tableName} WHERE first_level=9 AND nature=2";
+    return db.rawQuery(sql);
+  }
+
+  Future<List<Map<String,dynamic>>> getExpenseAccounts() async{
+    Database db = await repo.getDBInstance();
+    String sql="SELECT * FROM ${repo.tableName} WHERE first_level=5 AND nature=3";
+    return db.rawQuery(sql);
+  }
+
   Future<Map<String,dynamic>> getthirdLevelAccCode(String secondLevel) async{
       if(! await checkNetwork()){
         return {'status':-2,'message': 'Please Check Internet available'};

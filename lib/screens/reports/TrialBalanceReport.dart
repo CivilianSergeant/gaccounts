@@ -7,8 +7,10 @@ import 'package:gaccounts/config/AppConfig.dart';
 import 'package:gaccounts/persistance/entity/Amount.dart';
 import 'package:gaccounts/persistance/entity/TrialBalanceSectionItem.dart';
 import 'package:gaccounts/persistance/entity/User.dart';
+import 'package:gaccounts/persistance/repository/AccTrxMasterRepository.dart';
 import 'package:gaccounts/persistance/repository/ChartAccountRepository.dart';
 import 'package:gaccounts/persistance/repository/UserRepository.dart';
+import 'package:gaccounts/persistance/services/AccTrxMasterService.dart';
 import 'package:gaccounts/persistance/services/ChartAccountService.dart';
 import 'package:gaccounts/persistance/services/UserService.dart';
 import 'package:gaccounts/screens/reports/PdfViewer.dart';
@@ -67,7 +69,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
   Future<void> loadAccInfo() async{
     UserService userService = UserService(userRepo: UserRepository());
     User _user = await userService.checkCurrentUser();
-    GenerateRow();
+//    GenerateRow();
     if(mounted) {
       setState(() {
         user = _user;
@@ -504,14 +506,32 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
     );
   }
 
-  GenerateRow() async{
+  Future<void> GenerateRow() async{
+    AppConfig.log("HERE",line: "510");
     ChartAccountService chartAccService = ChartAccountService(repo: ChartAccountRepository());
+    AccTrxMasterService masterService = AccTrxMasterService(masterRepo: AccTrxMasterRepository());
+
     List<Map<String,dynamic>> parentAccounts = await chartAccService.getParentAccounts();
     List<Map<String,dynamic>> childAccounts = await chartAccService.getChildAccounts();
+    String startDate=fromDate.text;
+    String endDate = toDate.text;
+    Map<String,dynamic> results = await masterService.getTrialBalance(startDate, endDate);
+    List<Map<String,dynamic>> currentResults = results['current'];
+    List<Map<String,dynamic>> prevResults = results['prev'];
+
     List<pw.TableRow> _rows=[];
     _rows.add(TitleBar());
 
     parentAccounts.forEach((element) {
+
+      double p_received_total = 0;
+      double p_payment_total = 0;
+
+      double c_received_total = 0;
+      double c_payment_total = 0;
+
+      double b_received_total = 0;
+      double b_payment_total = 0;
       AppConfig.log(element,line: "530",className:  "TrialBalanceReport");
       if(element['acc_level']==2) {
         _rows.add(
@@ -519,21 +539,69 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
 
         childAccounts.forEach((childElement) {
           if(childElement['second_level']==element['acc_code']){
+            Map<String,dynamic> current = {};
+            Map<String,dynamic> prev = {};
+            currentResults.forEach((ce) {
+
+              if(childElement['acc_code'] == ce['acc_code']){
+                current = ce;
+              }
+            });
+            prevResults.forEach((_prev) {
+              if(childElement['acc_code'] == _prev['acc_code']){
+                prev = _prev;
+              }
+            });
+            AppConfig.log(prev,line:"538");
+            double p_received = (prev!=null && prev['credit'] !=null)? prev['credit']: 0;
+            double p_payment = (prev!=null && prev['debit'] != null)? prev['debit']: 0;
+
+            double c_received = (current!=null && current['credit'] !=null)? current['credit'] : 0;
+            double c_payment = (current!=null && current['debit']!=null)? current['debit'] : 0;
+
+            double b_received = 0;
+            double b_payment = 0;
+
+            p_received_total += p_received;
+            p_payment_total += p_payment;
+
+            c_received_total += c_received;
+            c_payment_total += c_payment;
+
+            double remainingBalance = (c_received - c_payment);
+            double remainingPrevBalance = (p_received - p_payment);
+            if(remainingBalance<0){
+              b_payment = remainingBalance.abs();
+            }else{
+              b_received = remainingBalance+0;
+            }
+
+            if(remainingPrevBalance < 0){
+              b_payment = (b_payment+remainingPrevBalance.abs());
+            }else{
+              b_received = (b_received+remainingPrevBalance);
+            }
+
+            b_received_total+=b_received;
+            b_payment_total+=b_payment;
+
             _rows.add(SectionItem(new TrialBalanceSectionItem(
                 caption: "${childElement['acc_code']}-${childElement['acc_name']}",
                 isBold: false,
-                prev:Amount(received: "200",payment: "0"),
-                current: Amount(received: "300",payment: "50"),
-                balance: Amount(received: "240",payment: "40")
+                prev:Amount(received: p_received.toString(),payment: p_payment.toString()),
+                current: Amount(
+                    received: c_received.toString(),
+                    payment: c_payment.toString()),
+                balance: Amount(received: b_received.toString(),payment: b_payment.toString())
             )));
           }
         });
         _rows.add(SectionItem(new TrialBalanceSectionItem(
             caption: "Sub Total",
             isBold: true,
-            prev:Amount(received: "200",payment: "0"),
-            current: Amount(received: "300",payment: "50"),
-            balance: Amount(received: "240",payment: "40")
+            prev:Amount(received: p_received_total.toString(),payment: p_payment_total.toString()),
+            current: Amount(received: c_received_total.toString(),payment: c_payment_total.toString()),
+            balance: Amount(received: b_received_total.toString(),payment: b_payment_total.toString())
         )));
       }
     });
@@ -558,6 +626,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
 
   Future<void> GenerateReport() async{
 
+    await GenerateRow();
     pdf.addPage(pw.MultiPage(
         margin: pw.EdgeInsets.all(10),
         pageFormat: PdfPageFormat.a4,
@@ -591,7 +660,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
     ));
 
     String dir = (await getExternalStorageDirectory()).path;
-    String filename = "${dir}/income_expense_report.pdf";
+    String filename = "${dir}/trial_balance_report.pdf";
     File f = File(filename);
     f.writeAsBytesSync(pdf.save());
     platform.invokeMethod("scanFile", {'path':filename});
