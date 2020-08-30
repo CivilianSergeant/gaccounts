@@ -421,6 +421,36 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
     );
   }
 
+  Map<String,dynamic> _processReport(Map<String,dynamic> childElement,List<Map<String,dynamic>> currentResults, List<Map<String,dynamic>> prevResults){
+    Map<String,dynamic> current = {};
+    Map<String,dynamic> prev = {};
+    currentResults.forEach((ce) {
+
+      if(childElement['acc_code'] == ce['acc_code']){
+        current = ce;
+      }
+    });
+    prevResults.forEach((_prev) {
+      if(childElement['acc_code'] == _prev['acc_code']){
+        prev = _prev;
+      }
+    });
+
+    double prevCredit = (prev['credit']!=null)? prev['credit']: 0;
+    double prevDebit = (prev['debit']!=null)? prev['debit']:0;
+    double currentCredit = (current['credit']!=null)? current['credit']: 0;
+    double currentDebit = (current['debit']!=null)? current['debit']:0;
+
+    double prevAmount = prevCredit - prevDebit;
+    double currentAmount = currentCredit - currentDebit;
+    double balance = (prevAmount + currentAmount);
+    return {
+      'prevAmount':prevAmount,
+      'currentAmount': currentAmount,
+      'balance': balance
+    };
+  }
+
   Future<void> GenerateRow() async{
     ChartAccountService chartAccService = ChartAccountService(repo: ChartAccountRepository());
     AccTrxMasterService masterService = AccTrxMasterService(masterRepo: AccTrxMasterRepository());
@@ -446,30 +476,14 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
     rows.add(SectionHeader("Income"));
     incomeAccounts.forEach((childElement) {
 
-      Map<String,dynamic> current = {};
-      Map<String,dynamic> prev = {};
-      currentResults.forEach((ce) {
 
-        if(childElement['acc_code'] == ce['acc_code']){
-          current = ce;
-        }
-      });
-      prevResults.forEach((_prev) {
-        if(childElement['acc_code'] == _prev['acc_code']){
-          prev = _prev;
-        }
-      });
+      Map<String,dynamic> data = _processReport(childElement, currentResults, prevResults);
+      double prevAmount = data['prevAmount'];
+      double currentAmount = data['currentAmount'];
+      double balance = data['balance'];
 
-      double prevCredit = (prev['credit']!=null)? prev['credit']: 0;
-      double prevDebit = (prev['debit']!=null)? prev['debit']:0;
-      double currentCredit = (current['credit']!=null)? current['credit']: 0;
-      double currentDebit = (current['debit']!=null)? current['debit']:0;
-
-      double prevAmount = prevCredit - prevDebit;
       totalPrevIncome += prevAmount;
-      double currentAmount = currentCredit - currentDebit;
       totalCurIncome += currentAmount;
-      double balance = (prevAmount + currentAmount);
       totalBalanceIncome+= balance;
       rows.add(SectionItemRow(childElement['acc_code'],childElement['acc_name'],prevAmount,currentAmount,balance));
     });
@@ -478,29 +492,14 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
 
     rows.add(SectionHeader("Expense"));
     expenseAccounts.forEach((childElement) {
-      Map<String,dynamic> current = {};
-      Map<String,dynamic> prev = {};
-      currentResults.forEach((ce) {
 
-        if(childElement['acc_code'] == ce['acc_code']){
-          current = ce;
-        }
-      });
-      prevResults.forEach((_prev) {
-        if(childElement['acc_code'] == _prev['acc_code']){
-          prev = _prev;
-        }
-      });
-      double prevCredit = (prev['credit']!=null)? prev['credit']: 0;
-      double prevDebit = (prev['debit']!=null)? prev['debit']:0;
-      double currentCredit = (current['credit']!=null)? current['credit']: 0;
-      double currentDebit = (current['debit']!=null)? current['debit']:0;
+      Map<String,dynamic> data = _processReport(childElement, currentResults, prevResults);
+      double prevAmount = data['prevAmount'];
+      double currentAmount = data['currentAmount'];
+      double balance = data['balance'];
 
-      double prevAmount = prevCredit - prevDebit;
       totalPrevExpense+= prevAmount;
-      double currentAmount = currentCredit - currentDebit;
       totalCurExpense += currentAmount;
-      double balance = (prevAmount + currentAmount);
       totalBalanceExpense += balance;
       rows.add(SectionItemRow(childElement['acc_code'],childElement['acc_name'],prevAmount,currentAmount,balance));
     });

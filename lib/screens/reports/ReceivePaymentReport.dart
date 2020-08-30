@@ -3,8 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gaccounts/persistance/entity/User.dart';
+import 'package:gaccounts/persistance/repository/AccTrxMasterRepository.dart';
 import 'package:gaccounts/persistance/repository/UserRepository.dart';
+import 'package:gaccounts/persistance/services/AccTrxMasterService.dart';
 import 'package:gaccounts/persistance/services/UserService.dart';
+import 'package:gaccounts/persistance/services/ChartAccountService.dart';
+import 'package:gaccounts/persistance/repository/ChartAccountRepository.dart';
 import 'package:gaccounts/screens/reports/PdfViewer.dart';
 import 'package:gaccounts/widgets/ActionButton.dart';
 import 'package:gaccounts/widgets/TextFieldExt.dart';
@@ -143,7 +147,7 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
     return pw.TableRow(
         children: <pw.Widget>[
           pw.Container(
-              width:40,
+              width:50,
               child: pw.Text("Code")
           ),
           pw.Container(
@@ -173,7 +177,7 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
     return pw.TableRow(
         children: <pw.Widget>[
           pw.Container(
-              width: 40,
+              width: 50,
               margin: pw.EdgeInsets.only(top: 10),
               decoration: pw.BoxDecoration(
                   border: pw.BoxBorder(
@@ -228,11 +232,11 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
     );
   }
 
-  TotalRow(String caption){
+  TotalRow(String caption,double prev,double cur, double balance){
     return pw.TableRow(
         children: <pw.Widget>[
           pw.Container(
-              width: 40,
+              width: 50,
               margin: pw.EdgeInsets.only(top: 10),
 
               child: pw.Text("${caption}",style: pw.TextStyle(
@@ -255,7 +259,7 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
                       bottom: true
                   )
               ),
-              child: pw.Text("0.00")
+              child: pw.Text("${prev}")
           ),
           pw.Container(
               width: 40,
@@ -267,7 +271,7 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
                       bottom: true
                   )
               ),
-              child: pw.Text("0.00")
+              child: pw.Text("${cur}")
           ),
           pw.Container(
               width: 40,
@@ -280,7 +284,7 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
                       bottom: true
                   )
               ),
-              child: pw.Text("0.00")
+              child: pw.Text("${balance}")
           ),
         ]
     );
@@ -358,22 +362,147 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
     );
   }
 
-  GenerateRow(){
+  SectionItemRow(String code,String accName, double prev, double current, double toDate){
+    return pw.TableRow(
+        children: <pw.Widget>[
+          pw.Container(
+              width: 50,
+              margin: pw.EdgeInsets.only(top: 10),
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${code}")
+          ),
+          pw.Container(
+              width: 100,
+              margin: pw.EdgeInsets.only(top: 10),
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${accName}")
+          ),
+          pw.Container(
+              width:40,
+              margin: pw.EdgeInsets.only(top: 10),
+              alignment: pw.Alignment.centerRight,
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${prev.toString()}")
+          ),
+          pw.Container(
+              width: 40,
+              margin: pw.EdgeInsets.only(top: 10),
+              alignment: pw.Alignment.centerRight,
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${current.toString()}")
+          ),
+          pw.Container(
+              width: 40,
+              margin: pw.EdgeInsets.only(top: 10),
+              alignment: pw.Alignment.centerRight,
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${toDate.toString()}")
+          ),
+        ]
+    );
+  }
+
+  Map<String,dynamic> _processReport(Map<String,dynamic> childElement,List<Map<String,dynamic>> currentResults, List<Map<String,dynamic>> prevResults){
+    Map<String,dynamic> current = {};
+    Map<String,dynamic> prev = {};
+    currentResults.forEach((ce) {
+
+      if(childElement['acc_code'] == ce['acc_code']){
+        current = ce;
+      }
+    });
+    prevResults.forEach((_prev) {
+      if(childElement['acc_code'] == _prev['acc_code']){
+        prev = _prev;
+      }
+    });
+
+    double prevCredit = (prev['credit']!=null)? prev['credit']: 0;
+    double prevDebit = (prev['debit']!=null)? prev['debit']:0;
+    double currentCredit = (current['credit']!=null)? current['credit']: 0;
+    double currentDebit = (current['debit']!=null)? current['debit']:0;
+
+    double prevAmount = prevCredit - prevDebit;
+    double currentAmount = currentCredit - currentDebit;
+    double balance = (prevAmount + currentAmount);
+    return {
+      'prevAmount':prevAmount,
+      'currentAmount': currentAmount,
+      'balance': balance
+    };
+  }
+
+  Future<void> GenerateRow() async{
+    ChartAccountService chartAccService = ChartAccountService(repo: ChartAccountRepository());
+    AccTrxMasterService masterService = AccTrxMasterService(masterRepo: AccTrxMasterRepository());
+
+    List<Map<String,dynamic>> receivedAccounts = await chartAccService.getReceivedChartAccounts();
+    List<Map<String,dynamic>> paymentAccounts = await chartAccService.getPaymentChartAccounts();
+    String startDate = fromDate.text;
+    String endDate = toDate.text;
+
+    Map<String,dynamic> results = await masterService.getAccountsBalance(startDate, endDate,upToPrev: true);
+    List<Map<String,dynamic>> currentResults = results['current'];
+    List<Map<String,dynamic>> prevResults = results['prev'];
+
+    double totalPrevReceipt = 0;
+    double totalPrevPayment = 0;
+    double totalCurReceipt = 0;
+    double totalCurPayment = 0;
+    double totalBalanceReceipt=0;
+    double totalBalancePayment=0;
+
     rows.add(TitleBar());
     rows.add(SectionHeader("Receipts"));
-    rows.add(TotalRow("Total Receipts"));
+    receivedAccounts.forEach((element){
+      Map<String,dynamic> data = _processReport(element, currentResults, prevResults);
+      double prevAmount = data['prevAmount'];
+      double currentAmount = data['currentAmount'];
+      double balance = data['balance'];
+
+      totalPrevReceipt += prevAmount;
+      totalCurReceipt += currentAmount;
+      totalBalanceReceipt+= balance;
+      rows.add(SectionItemRow(element['acc_code'], element['acc_name'],prevAmount,currentAmount,balance));
+    });
+    rows.add(TotalRow("Total Receipts",totalPrevReceipt,totalCurReceipt,totalBalanceReceipt));
 
     rows.add(SectionHeader("Payments"));
-    rows.add(TotalRow("Total Payments"));
-    rows.add(NetTotalRow());
+    paymentAccounts.forEach((element){
+
+      rows.add(SectionItemRow(element['acc_code'], element['acc_name'], 0, 0, 0));
+    });
+    rows.add(TotalRow("Total Payments",totalPrevPayment,totalCurPayment,totalBalancePayment));
+
   }
 
   Future<void> GenerateReport() async{
+    await GenerateRow();
     pdf.addPage(pw.MultiPage(
         margin: pw.EdgeInsets.all(10),
         pageFormat: PdfPageFormat.a4,
         build:(pw.Context context){
-          GenerateRow();
+
           return <pw.Widget>[
             pw.SizedBox(height: 40),
             pw.Row(
@@ -402,7 +531,7 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
     ));
 
     String dir = (await getExternalStorageDirectory()).path;
-    String filename = "${dir}/income_expense_report.pdf";
+    String filename = "${dir}/received_payment_report.pdf";
     File f = File(filename);
     f.writeAsBytesSync(pdf.save());
     platform.invokeMethod("scanFile", {'path':filename});

@@ -2,8 +2,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gaccounts/config/AppConfig.dart';
 import 'package:gaccounts/persistance/entity/User.dart';
+import 'package:gaccounts/persistance/repository/AccTrxMasterRepository.dart';
+import 'package:gaccounts/persistance/repository/ChartAccountRepository.dart';
 import 'package:gaccounts/persistance/repository/UserRepository.dart';
+import 'package:gaccounts/persistance/services/AccTrxMasterService.dart';
+import 'package:gaccounts/persistance/services/ChartAccountService.dart';
 import 'package:gaccounts/persistance/services/UserService.dart';
 import 'package:gaccounts/screens/reports/PdfViewer.dart';
 import 'package:gaccounts/widgets/ActionButton.dart';
@@ -32,8 +37,11 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
   DateTime toDay;
   DateTime toInitial;
 
-  TextEditingController fromDate = TextEditingController();
-  TextEditingController toDate = TextEditingController();
+//  TextEditingController fromDate = TextEditingController();
+//  TextEditingController toDate = TextEditingController();
+
+  String fromDate="";
+  String toDate = "";
 
   User user;
 
@@ -75,54 +83,9 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
       body: SafeArea(
         child: SingleChildScrollView(
           child: Container(
+            alignment: Alignment.topCenter,
             child: Column(
               children: <Widget>[
-                TextFieldExt(
-                  hintText: "From Date",
-                  icon: Icons.date_range,
-                  controller: fromDate,
-                  readonly: true,
-                  borderRadius: 20,
-                  topPad: 15,
-                  onTap:(){
-                    showDatePicker(context: context, initialDate:fromInitial , firstDate: DateTime(fromStartYear), lastDate: DateTime(fromEndYear))
-                        .then((date){
-                      if(date != null){
-                        fromDate.text = (date.toString().substring(0,11).trim());
-
-                        setState(() {
-                          fromInitial = DateTime.parse(fromDate.text);
-                        });
-  //                             getAgeInWords();
-                      }else{
-                        fromDate.text="";
-                      }
-                    });
-                  }
-                ),
-                TextFieldExt(
-                  hintText: "To Date",
-                  icon: Icons.date_range,
-                  controller: toDate,
-                  readonly: true,
-                  borderRadius: 20,
-                  topPad: 15,
-                  onTap:(){
-                    showDatePicker(context: context, initialDate:toInitial , firstDate: DateTime(toStartYear), lastDate: DateTime(toEndYear))
-                        .then((date){
-                      if(date != null){
-                        toDate.text = (date.toString().substring(0,11).trim());
-
-                        setState(() {
-                          toInitial = DateTime.parse(toDate.text);
-                        });
-//                             getAgeInWords();
-                      }else{
-                        toDate.text="";
-                      }
-                    });
-                  }
-                ),
                 SizedBox(height: 20,),
                 ActionButton(
                   width: MediaQuery.of(context).size.width-40,
@@ -154,29 +117,29 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
           pw.Container(
               width: 60,
               alignment: pw.Alignment.centerRight,
-              child: pw.Text("Cur. Month Amount")
+              child: pw.Text("Cur. Amount")
           ),
           pw.Container(
               width: 60,
               alignment: pw.Alignment.centerRight,
-              child: pw.Text("Prev Month Amount")
+              child: pw.Text("Prv. Amount")
           ),
         ]
     );
   }
 
-  SectionHeader(String caption){
+  PrimarySectionHeader(String code,String name){
     return pw.TableRow(
         children: <pw.Widget>[
           pw.Container(
-              width: 40,
+              width: 60,
               margin: pw.EdgeInsets.only(top: 10),
               decoration: pw.BoxDecoration(
                   border: pw.BoxBorder(
                       top: true
                   )
               ),
-              child: pw.Text("${caption}",style: pw.TextStyle(
+              child: pw.Text("${code}",style: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold
               ))
           ),
@@ -188,7 +151,7 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
                       top: true
                   )
               ),
-              child: pw.Text("")
+              child: pw.Text("${name}")
           ),
           pw.Container(
               width:40,
@@ -218,6 +181,46 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
                       top: true
                   )
               ),
+              child: pw.Text("")
+          ),
+        ]
+    );
+  }
+
+  SectionHeader(String code,String name){
+    return pw.TableRow(
+        children: <pw.Widget>[
+          pw.Container(
+              width: 60,
+              margin: pw.EdgeInsets.only(top: 10),
+
+              child: pw.Text("${code}",style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold
+              ))
+          ),
+          pw.Container(
+              width: 100,
+              margin: pw.EdgeInsets.only(top: 10),
+              child: pw.Text("${name}",style: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold
+              ))
+          ),
+          pw.Container(
+              width:40,
+              margin: pw.EdgeInsets.only(top: 10),
+
+              child: pw.Text("")
+          ),
+          pw.Container(
+              width: 40,
+              margin: pw.EdgeInsets.only(top: 10),
+
+              child: pw.Text("")
+          ),
+          pw.Container(
+              width: 40,
+              margin: pw.EdgeInsets.only(top: 10),
+
               child: pw.Text("")
           ),
         ]
@@ -345,21 +348,218 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
     );
   }
 
-  GenerateRow(){
+  SectionItemRow(String code,String accName,  double current, double prev, double toDate){
+    return pw.TableRow(
+        children: <pw.Widget>[
+          pw.Container(
+              width: 50,
+              margin: pw.EdgeInsets.only(top: 10),
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${code}")
+          ),
+          pw.Container(
+              width: 100,
+              margin: pw.EdgeInsets.only(top: 10),
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${accName}")
+          ),
+          pw.Container(
+              width:40,
+              margin: pw.EdgeInsets.only(top: 10),
+              alignment: pw.Alignment.centerRight,
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("")
+          ),
+          pw.Container(
+              width: 40,
+              margin: pw.EdgeInsets.only(top: 10),
+              alignment: pw.Alignment.centerRight,
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${current.toString()}")
+          ),
+          pw.Container(
+              width: 40,
+              margin: pw.EdgeInsets.only(top: 10),
+              alignment: pw.Alignment.centerRight,
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(
+//                      top: true
+                  )
+              ),
+              child: pw.Text("${prev.toString()}")
+          ),
+        ]
+    );
+  }
+
+  TableRowDivider(){
+    return pw.TableRow(
+        children: [
+          pw.Container(
+              height: 10,
+              margin: pw.EdgeInsets.only(top:5),
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(top: true)
+              )
+          ),
+          pw.Container(
+              height: 10,
+              margin: pw.EdgeInsets.only(top:5),
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(top: true)
+              )
+          ),
+          pw.Container(
+              height: 10,
+              margin: pw.EdgeInsets.only(top:5),
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(top: true)
+              )
+          ),
+          pw.Container(
+              height: 10,
+              margin: pw.EdgeInsets.only(top:5),
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(top: true)
+              )
+          ),
+          pw.Container(
+              height: 10,
+              margin: pw.EdgeInsets.only(top:5),
+              decoration: pw.BoxDecoration(
+                  border: pw.BoxBorder(top: true)
+              )
+          )
+        ]
+    );
+  }
+
+  Map<String,dynamic> _processReport(Map<String,dynamic> childElement,
+      List<Map<String,dynamic>> currentResults, List<Map<String,dynamic>> prevResults,{String type}){
+    Map<String,dynamic> current = {};
+    Map<String,dynamic> prev = {};
+    currentResults.forEach((ce) {
+
+      if(childElement['acc_code'] == ce['acc_code']){
+        current = ce;
+      }
+    });
+    prevResults.forEach((_prev) {
+      if(childElement['acc_code'] == _prev['acc_code']){
+        prev = _prev;
+      }
+    });
+
+    AppConfig.log(current,line:"468");
+    double prevCredit = (prev['credit']!=null)? prev['credit']: 0;
+    double prevDebit = (prev['debit']!=null)? prev['debit']:0;
+    double currentCredit = (current['credit']!=null)? current['credit']: 0;
+    double currentDebit = (current['debit']!=null)? current['debit']:0;
+
+    double prevAmount = (type=="asset")? (prevDebit-prevCredit) : (prevCredit - prevDebit);
+    double currentAmount = (type=="asset")?(currentDebit-currentCredit):(currentCredit - currentDebit);
+//    double balance = (prevAmount + currentAmount);
+    return {
+      'prevAmount':prevAmount,
+      'currentAmount': currentAmount,
+//      'balance': balance
+    };
+  }
+
+  Future<void> GenerateRow() async{
+
+    FindDate();
+
+    ChartAccountService chartAccService = ChartAccountService(repo: ChartAccountRepository());
+    AccTrxMasterService masterService = AccTrxMasterService(masterRepo: AccTrxMasterRepository());
+
+    List<Map<String,dynamic>> assetAccounts = await chartAccService.getAssetParentAccounts();
+    List<Map<String,dynamic>> assetSecondLevelAccounts = await chartAccService.getAssetSecondLevelAccounts();
+    List<Map<String,dynamic>> assetThirdLevelAccounts = await chartAccService.getAssetThirdLevelAccounts();
+
+    List<Map<String,dynamic>> liabilityAccounts = await chartAccService.getLiabilityParentAccounts();
+    List<Map<String,dynamic>> liabilitySecondAccounts = await chartAccService.getLiabilitySecondLevelAccounts();
+    List<Map<String,dynamic>> liabilityThirdAccounts = await chartAccService.getLiabilityThirdLevelAccounts();
+
+    Map<String,dynamic> results = await masterService.getAccountsBalance(fromDate, toDate,upToPrev: true);
+    List<Map<String,dynamic>> currentResults = results['current'];
+    List<Map<String,dynamic>> prevResults = results['prev'];
+
     rows.add(TitleBar());
-    rows.add(SectionHeader("Receipts"));
-    rows.add(TotalRow("Total Receipts"));
-    rows.add(SectionHeader("Payments"));
-    rows.add(TotalRow("Total Payments"));
+    rows.add(TableRowDivider());
+    assetAccounts.forEach((firstLevel) {
+        rows.add(SectionHeader("${firstLevel['acc_name']}", ""));
+
+        assetSecondLevelAccounts.forEach((secondLevel) {
+          rows.add(SectionHeader("","${secondLevel['acc_name']}"));
+          assetThirdLevelAccounts.forEach((element) {
+            if(element['second_level'] == secondLevel['acc_code']) {
+              Map<String,dynamic> data = _processReport(element, currentResults, prevResults,type:'asset');
+              rows.add(SectionItemRow(
+                  element['acc_code'], element['acc_name'], data['currentAmount'], data['prevAmount'], 0));
+            }
+          });
+          rows.add(TotalRow("Total of ${secondLevel['acc_name']}"));
+        });
+        rows.add(TotalRow("Total of ${firstLevel['acc_name']}"));
+    });
+    rows.add(TableRowDivider());
+    liabilityAccounts.forEach((firstLevel) {
+      rows.add(SectionHeader("${firstLevel['acc_name']}", ""));
+      liabilitySecondAccounts.forEach((secondLevel) {
+        rows.add(SectionHeader("","${secondLevel['acc_name']}"));
+        liabilityThirdAccounts.forEach((element) {
+          if(element['second_level'] == secondLevel['acc_code']) {
+            Map<String,dynamic> data = _processReport(element, currentResults, prevResults,type:'liabilities');
+            rows.add(SectionItemRow(
+                element['acc_code'], element['acc_name'], data['currentAmount'], data['prevAmount'], 0));
+          }
+        });
+        rows.add(TotalRow("Total of ${secondLevel['acc_name']}"));
+      });
+      rows.add(TotalRow("Total of ${firstLevel['acc_name']}"));
+    });
+
 
   }
 
+  FindDate(){
+    DateTime dt = DateTime.now();
+    int month = dt.month;
+    if(month<7){
+        fromDate = "${(dt.year-1)}-07-01";
+        toDate = "${dt.year}-06-30";
+    }else{
+       fromDate = "${dt.year}-07-01";
+       toDate = "${dt.year+1}-06-30";
+    }
+  }
+
   Future<void> GenerateReport() async{
+
+    await GenerateRow();
+
     pdf.addPage(pw.MultiPage(
         margin: pw.EdgeInsets.all(10),
         pageFormat: PdfPageFormat.a4,
         build:(pw.Context context){
-          GenerateRow();
+
           return <pw.Widget>[
             pw.SizedBox(height: 40),
             pw.Row(
@@ -369,7 +569,7 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text("${user.username}"),
-                        pw.Text("Date: "+fromDate.text+" - "+toDate.text)
+                        pw.Text("Date: From ${fromDate} to ${toDate}")
                       ]
                   )
                 ]
@@ -380,7 +580,6 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
                 child: pw.Text("Balance Sheet")
             ),
             pw.Table(
-
                 children: rows
             )
           ];
@@ -388,7 +587,7 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
     ));
 
     String dir = (await getExternalStorageDirectory()).path;
-    String filename = "${dir}/income_expense_report.pdf";
+    String filename = "${dir}/balance_sheet_report.pdf";
     File f = File(filename);
     f.writeAsBytesSync(pdf.save());
     platform.invokeMethod("scanFile", {'path':filename});

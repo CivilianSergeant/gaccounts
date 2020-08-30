@@ -31,6 +31,47 @@ class ChartAccountService extends NetworkService{
     return db.rawQuery(sql);
   }
 
+  Future<List<Map<String,dynamic>>> getAssetParentAccounts() async{
+    Database db = await repo.getDBInstance();
+    String sql="SELECT * FROM ${repo.tableName} WHERE acc_level=1 AND first_level = 1 and nature = 1";
+    return db.rawQuery(sql);
+  }
+
+  Future<List<Map<String,dynamic>>> getAssetSecondLevelAccounts() async{
+    Database db = await repo.getDBInstance();
+    String sql="SELECT * FROM ${repo.tableName} WHERE acc_level=2 AND first_level = 1 and nature = 1";
+    return db.rawQuery(sql);
+  }
+
+
+
+  Future<List<Map<String,dynamic>>> getAssetThirdLevelAccounts() async{
+    Database db = await repo.getDBInstance();
+    String sql="SELECT * FROM ${repo.tableName} WHERE acc_level=3 AND first_level = 1 and nature = 1";
+    return db.rawQuery(sql);
+  }
+
+  Future<List<Map<String,dynamic>>> getLiabilityParentAccounts() async{
+    Database db = await repo.getDBInstance();
+    String sql="SELECT * FROM ${repo.tableName} WHERE acc_level=1 AND first_level = 3 and nature = 1";
+    return db.rawQuery(sql);
+  }
+
+  Future<List<Map<String,dynamic>>> getLiabilitySecondLevelAccounts() async{
+    Database db = await repo.getDBInstance();
+    String sql="SELECT * FROM ${repo.tableName} WHERE acc_level=2 AND first_level = 3 and nature = 1";
+    return db.rawQuery(sql);
+  }
+
+  Future<List<Map<String,dynamic>>> getLiabilityThirdLevelAccounts() async{
+    Database db = await repo.getDBInstance();
+    String sql="SELECT * FROM ${repo.tableName} WHERE acc_level=3 AND first_level = 3 and nature = 1";
+    return db.rawQuery(sql);
+  }
+
+
+
+
   Future<List<Map<String,dynamic>>> getChildAccounts() async{
     Database db = await repo.getDBInstance();
     String sql="SELECT * FROM ${repo.tableName} WHERE acc_level IN (3)";

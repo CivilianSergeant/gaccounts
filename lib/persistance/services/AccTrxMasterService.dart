@@ -156,7 +156,7 @@ class AccTrxMasterService extends NetworkService{
     return prevMonth;
   }
 
-  Future<Map<String,dynamic>> getAccountsBalance(String startDate, String endDate) async{
+  Future<Map<String,dynamic>> getAccountsBalance(String startDate, String endDate,{bool upToPrev}) async{
     String sql ="SELECT atm.*, SUM(atd.credit) as credit , SUM(atd.debit) debit,ca.acc_code from ${masterRepo.tableName} atm"
         " JOIN ${detailRepository.tableName} atd ON atd.trx_master_id = atm.trx_master_id"
         " JOIN chart_accounts ca ON ca.acc_id = atd.acc_id"
@@ -171,9 +171,13 @@ class AccTrxMasterService extends NetworkService{
 
     String sql1 ="SELECT atm.*, SUM(atd.credit) as credit , SUM(atd.debit) debit,ca.acc_code from ${masterRepo.tableName} atm"
         " JOIN ${detailRepository.tableName} atd ON atd.trx_master_id = atm.trx_master_id"
-        " JOIN chart_accounts ca ON ca.acc_id = atd.acc_id"
-        " WHERE atm.trx_date like '${year}-${prevMonth}%'"
-        " GROUP BY atd.acc_id";
+        " JOIN chart_accounts ca ON ca.acc_id = atd.acc_id";
+    if(upToPrev !=null && upToPrev){
+      sql1 += " WHERE strftime('%s',atm.trx_date) < strftime('%s','${startDate}')";
+    }else {
+      sql1 += " WHERE atm.trx_date like '${year}-${prevMonth}%'";
+    }
+     sql1 +=   " GROUP BY atd.acc_id";
 
     Database db = await masterRepo.getDBInstance();
     List<Map<String,dynamic>> currenResults =  await db.rawQuery(sql);
