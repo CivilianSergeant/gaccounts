@@ -120,6 +120,35 @@ class AccTrxMasterService extends NetworkService{
     return openingBalance.abs();
   }
 
+  Future<double> getBankOpeningBalance(String date) async{
+    double received = 0;
+    double payment = 0;
+    double openingBalance = 0;
+    Database db = await detailRepository.getDBInstance();
+
+    String sql = "SELECT atm.*, atd.narration, atd.credit,atd.debit,ca.acc_code,ca.acc_name from ${masterRepo.tableName} atm"
+        " JOIN ${detailRepository.tableName} atd ON atd.trx_master_id = atm.trx_master_id"
+        " JOIN chart_accounts ca ON ca.acc_id = atd.acc_id"
+        " WHERE strftime('%s',atm.trx_date) < strftime('%s','${date}') AND ca.acc_level=3 AND ca.acc_name = 'Cash at Bank'";
+
+    AppConfig.log(sql);
+    List<dynamic> results = await db.rawQuery(sql);
+
+
+    AppConfig.log(results,line: "138",className: "AccTrxMasterService");
+
+    results.forEach((element) {
+
+        received += element['credit'];
+        payment += element['debit'];
+
+    });
+
+
+    openingBalance = received - payment;
+    return openingBalance;
+  }
+
   Future<int> updateVoucher(int id,{dynamic data}) async{
     Database db = await masterRepo.getDBInstance();
     return await db.update(masterRepo.tableName, {'is_posted':0,'trx_date':data['trx_date']},where:'trx_master_id=?',whereArgs: [id]);

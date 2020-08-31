@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gaccounts/config/AppConfig.dart';
 import 'package:gaccounts/persistance/entity/User.dart';
 import 'package:gaccounts/persistance/repository/AccTrxMasterRepository.dart';
 import 'package:gaccounts/persistance/repository/UserRepository.dart';
@@ -422,7 +423,9 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
     );
   }
 
-  Map<String,dynamic> _processReport(Map<String,dynamic> childElement,List<Map<String,dynamic>> currentResults, List<Map<String,dynamic>> prevResults){
+  Map<String,dynamic> _processReport(Map<String,dynamic> childElement,
+      List<Map<String,dynamic>> currentResults, List<Map<String,dynamic>> prevResults,
+  {String type}){
     Map<String,dynamic> current = {};
     Map<String,dynamic> prev = {};
     currentResults.forEach((ce) {
@@ -442,9 +445,9 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
     double currentCredit = (current['credit']!=null)? current['credit']: 0;
     double currentDebit = (current['debit']!=null)? current['debit']:0;
 
-    double prevAmount = prevCredit - prevDebit;
-    double currentAmount = currentCredit - currentDebit;
-    double balance = (prevAmount + currentAmount);
+    double prevAmount = (type=="receipt")? (prevCredit - prevDebit) : (prevDebit-prevCredit);
+    double currentAmount =(type=="receipt")? (currentCredit - currentDebit) : (currentDebit - currentCredit);
+    double balance =  (prevAmount + currentAmount);
     return {
       'prevAmount':prevAmount,
       'currentAmount': currentAmount,
@@ -458,10 +461,19 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
 
     List<Map<String,dynamic>> receivedAccounts = await chartAccService.getReceivedChartAccounts();
     List<Map<String,dynamic>> paymentAccounts = await chartAccService.getPaymentChartAccounts();
+    Map<String,dynamic> cashInHand = await chartAccService.getCashAccount();
+    Map<String,dynamic> cashAtBank = await chartAccService.getBankAccount();
+
     String startDate = fromDate.text;
     String endDate = toDate.text;
 
     Map<String,dynamic> results = await masterService.getAccountsBalance(startDate, endDate,upToPrev: true);
+    double bankOpeningBalance = await masterService.getBankOpeningBalance(endDate);
+    double bankPrevOpeningBalance = await masterService.getBankOpeningBalance(startDate);
+
+    double currentOpeningBalance = await masterService.getOpeningBalance(null, endDate);
+    double prevOpeningBalance = await masterService.getOpeningBalance(null, startDate);
+
     List<Map<String,dynamic>> currentResults = results['current'];
     List<Map<String,dynamic>> prevResults = results['prev'];
 
@@ -472,10 +484,17 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
     double totalBalanceReceipt=0;
     double totalBalancePayment=0;
 
+
+
     rows.add(TitleBar());
+    rows.add(SectionHeader("Opening Balance"));
+    double balanceCashOpening = (prevOpeningBalance+currentOpeningBalance);
+    double balanceBankOpening = (bankPrevOpeningBalance+bankOpeningBalance);
+    rows.add(SectionItemRow(cashInHand['acc_code'],cashInHand['acc_name'],prevOpeningBalance,currentOpeningBalance,balanceCashOpening));
+    rows.add(SectionItemRow(cashAtBank['acc_code'],cashAtBank['acc_name'],bankPrevOpeningBalance,bankOpeningBalance,balanceBankOpening));
     rows.add(SectionHeader("Receipts"));
     receivedAccounts.forEach((element){
-      Map<String,dynamic> data = _processReport(element, currentResults, prevResults);
+      Map<String,dynamic> data = _processReport(element, currentResults, prevResults,type:"receipt");
       double prevAmount = data['prevAmount'];
       double currentAmount = data['currentAmount'];
       double balance = data['balance'];
@@ -489,11 +508,26 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
 
     rows.add(SectionHeader("Payments"));
     paymentAccounts.forEach((element){
+      Map<String,dynamic> data = _processReport(element, currentResults, prevResults,type:"payment");
+      double prevAmount = data['prevAmount'];
+      double currentAmount = data['currentAmount'];
+      double balance = data['balance'];
 
-      rows.add(SectionItemRow(element['acc_code'], element['acc_name'], 0, 0, 0));
+      totalPrevPayment += prevAmount;
+      totalCurPayment += currentAmount;
+      totalBalancePayment += balance;
+      rows.add(SectionItemRow(element['acc_code'], element['acc_name'], prevAmount.abs(), currentAmount.abs(), balance.abs()));
     });
-    rows.add(TotalRow("Total Payments",totalPrevPayment,totalCurPayment,totalBalancePayment));
 
+//    AppConfig.log("R: ${totalPrevReceipt}  P: ${totalPrevPayment} T: ${totalPrevReceipt+totalPrevPayment}");
+    double closingPrevCashBalance = prevOpeningBalance+ (totalPrevReceipt.abs() - totalPrevPayment.abs());
+    double closingCurCashBalance = currentOpeningBalance+ (totalCurReceipt.abs() - totalCurPayment.abs());
+    double closingBalanceCashBalance = balanceCashOpening + (totalBalanceReceipt.abs() - totalBalancePayment.abs());
+
+    rows.add(TotalRow("Total Payments",totalPrevPayment,totalCurPayment,totalBalancePayment));
+    rows.add(SectionHeader("Closing Balance"));
+    rows.add(SectionItemRow(cashInHand['acc_code'],cashInHand['acc_name'],closingPrevCashBalance,closingCurCashBalance,closingBalanceCashBalance));
+    rows.add(SectionItemRow(cashAtBank['acc_code'],cashAtBank['acc_name'],bankPrevOpeningBalance,bankOpeningBalance,balanceBankOpening));
   }
 
   Future<void> GenerateReport() async{

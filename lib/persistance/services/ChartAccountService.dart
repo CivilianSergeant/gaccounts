@@ -250,6 +250,10 @@ class ChartAccountService extends NetworkService{
     return await repo.getTypedAccounts(type: 'payment');
   }
 
+  Future<Map<String,dynamic>> getBankAccount() async {
+    return await repo.getSingleTypedAccount(type:'bank');
+  }
+
   Future<List<Map<String,dynamic>>> getBankChartAccounts() async {
     List<Map<String,dynamic>> maps = await repo.getTypedAccounts(type: 'bank');
     List<Map<String,dynamic>> bankAccounts = [];

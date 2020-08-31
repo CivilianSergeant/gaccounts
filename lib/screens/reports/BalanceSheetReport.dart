@@ -227,7 +227,7 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
     );
   }
 
-  TotalRow(String caption){
+  TotalRow(String caption,double current, double prev){
     return pw.TableRow(
         children: <pw.Widget>[
           pw.Container(
@@ -257,7 +257,7 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
                       bottom: true
                   )
               ),
-              child: pw.Text("0.00")
+              child: pw.Text("${current}")
           ),
           pw.Container(
               width: 40,
@@ -270,7 +270,7 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
                       bottom: true
                   )
               ),
-              child: pw.Text("0.00")
+              child: pw.Text("${prev}")
           ),
         ]
     );
@@ -504,36 +504,52 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
     rows.add(TitleBar());
     rows.add(TableRowDivider());
     assetAccounts.forEach((firstLevel) {
+        double sectionCurrentTotal=0;
+        double sectionPrevTotal=0;
         rows.add(SectionHeader("${firstLevel['acc_name']}", ""));
 
         assetSecondLevelAccounts.forEach((secondLevel) {
+          double subSectionCurrentTotal = 0;
+          double subSectionPrevTotal = 0;
           rows.add(SectionHeader("","${secondLevel['acc_name']}"));
           assetThirdLevelAccounts.forEach((element) {
             if(element['second_level'] == secondLevel['acc_code']) {
               Map<String,dynamic> data = _processReport(element, currentResults, prevResults,type:'asset');
+              subSectionCurrentTotal += data['currentAmount'];
+              subSectionPrevTotal += data['prevAmount'];
+              sectionCurrentTotal += subSectionCurrentTotal;
+              sectionPrevTotal += subSectionPrevTotal;
               rows.add(SectionItemRow(
                   element['acc_code'], element['acc_name'], data['currentAmount'], data['prevAmount'], 0));
             }
           });
-          rows.add(TotalRow("Total of ${secondLevel['acc_name']}"));
+          rows.add(TotalRow("Total of ${secondLevel['acc_name']}",subSectionCurrentTotal,subSectionPrevTotal));
         });
-        rows.add(TotalRow("Total of ${firstLevel['acc_name']}"));
+        rows.add(TotalRow("Total of ${firstLevel['acc_name']}",sectionCurrentTotal,sectionPrevTotal));
     });
     rows.add(TableRowDivider());
     liabilityAccounts.forEach((firstLevel) {
+      double sectionCurrentTotal = 0;
+      double sectionPrevTotal=0;
       rows.add(SectionHeader("${firstLevel['acc_name']}", ""));
       liabilitySecondAccounts.forEach((secondLevel) {
+        double subSectionCurrentTotal = 0;
+        double subSectionPrevTotal = 0;
         rows.add(SectionHeader("","${secondLevel['acc_name']}"));
         liabilityThirdAccounts.forEach((element) {
           if(element['second_level'] == secondLevel['acc_code']) {
             Map<String,dynamic> data = _processReport(element, currentResults, prevResults,type:'liabilities');
+            subSectionCurrentTotal += data['currentAmount'];
+            subSectionPrevTotal += data['prevAmount'];
+            sectionCurrentTotal += subSectionCurrentTotal;
+            sectionPrevTotal += subSectionPrevTotal;
             rows.add(SectionItemRow(
                 element['acc_code'], element['acc_name'], data['currentAmount'], data['prevAmount'], 0));
           }
         });
-        rows.add(TotalRow("Total of ${secondLevel['acc_name']}"));
+        rows.add(TotalRow("Total of ${secondLevel['acc_name']}",subSectionCurrentTotal,subSectionPrevTotal));
       });
-      rows.add(TotalRow("Total of ${firstLevel['acc_name']}"));
+      rows.add(TotalRow("Total of ${firstLevel['acc_name']}", sectionCurrentTotal, sectionPrevTotal));
     });
 
 

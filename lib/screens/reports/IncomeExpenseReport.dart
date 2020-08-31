@@ -421,7 +421,8 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
     );
   }
 
-  Map<String,dynamic> _processReport(Map<String,dynamic> childElement,List<Map<String,dynamic>> currentResults, List<Map<String,dynamic>> prevResults){
+  Map<String,dynamic> _processReport(Map<String,dynamic> childElement,List<Map<String,dynamic>> currentResults,
+      List<Map<String,dynamic>> prevResults, {String type}){
     Map<String,dynamic> current = {};
     Map<String,dynamic> prev = {};
     currentResults.forEach((ce) {
@@ -441,8 +442,9 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
     double currentCredit = (current['credit']!=null)? current['credit']: 0;
     double currentDebit = (current['debit']!=null)? current['debit']:0;
 
-    double prevAmount = prevCredit - prevDebit;
-    double currentAmount = currentCredit - currentDebit;
+    double prevAmount = (type=="income")? (prevCredit - prevDebit) : (prevDebit - prevCredit);
+    double currentAmount = (type=="income")? (currentCredit - currentDebit) : (prevDebit - prevCredit);
+
     double balance = (prevAmount + currentAmount);
     return {
       'prevAmount':prevAmount,
@@ -477,7 +479,7 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
     incomeAccounts.forEach((childElement) {
 
 
-      Map<String,dynamic> data = _processReport(childElement, currentResults, prevResults);
+      Map<String,dynamic> data = _processReport(childElement, currentResults, prevResults,type:"income");
       double prevAmount = data['prevAmount'];
       double currentAmount = data['currentAmount'];
       double balance = data['balance'];
@@ -493,7 +495,7 @@ class _IncomeExpenseReportState extends State<IncomeExpenseReport>{
     rows.add(SectionHeader("Expense"));
     expenseAccounts.forEach((childElement) {
 
-      Map<String,dynamic> data = _processReport(childElement, currentResults, prevResults);
+      Map<String,dynamic> data = _processReport(childElement, currentResults, prevResults,type:"expense");
       double prevAmount = data['prevAmount'];
       double currentAmount = data['currentAmount'];
       double balance = data['balance'];
