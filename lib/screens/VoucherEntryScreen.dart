@@ -990,6 +990,7 @@ class _VoucherEntryScreenState extends State<VoucherEntryScreen>{
     User user = await userService.checkCurrentUser();
     if(user.downloadVoucher==false){
       AppConfig.log('here');
+      Navigator.of(context).pop();
       Navigator.of(context).pushNamed('/sync-download');
     }
 

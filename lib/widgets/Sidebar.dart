@@ -17,6 +17,10 @@ import 'package:gaccounts/screens/reports/TrialBalanceReport.dart';
 import 'package:toast/toast.dart';
 
 class Sidebar extends StatefulWidget{
+  String name;
+
+  Sidebar({this.name});
+
   @override
   State<StatefulWidget> createState() => _SidebarState();
 
@@ -56,7 +60,7 @@ class _SidebarState extends State<Sidebar> {
                     ),
                   ),
                   SizedBox(height: 20,),
-                  Text("Welcome Username",style: TextStyle(
+                  Text("Welcome ${widget.name!=null? widget.name :''}",style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold
                   ),)

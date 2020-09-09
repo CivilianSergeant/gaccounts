@@ -41,7 +41,7 @@ class _SyncDownloadScreenState extends State<SyncDownloadScreen>{
                         child: CircularProgressIndicator()
                     ),
                   ),
-                  Center(child: Text("Uploading",style: TextStyle(
+                  Center(child: Text("Downloading",style: TextStyle(
                       color: Colors.white,fontWeight: FontWeight.w600,
                       fontSize: 16
                   ),))
@@ -63,10 +63,11 @@ class _SyncDownloadScreenState extends State<SyncDownloadScreen>{
 
   @override
   void didChangeDependencies() {
-    syncDownload();
+    dynamic fetchStatus =  ModalRoute.of(context).settings.arguments;
+    syncDownload(fetchStatus);
   }
 
-  Future<void> syncDownload() async{
+  Future<void> syncDownload(dynamic fetchStatus) async{
 
     if(isProcessing){
       return;
@@ -94,6 +95,9 @@ class _SyncDownloadScreenState extends State<SyncDownloadScreen>{
             gravity: Toast.CENTER);
       }
 
+    }
+    if(fetchStatus!=null){
+      Navigator.of(context).pop();
     }
     Navigator.of(context).pop();
 

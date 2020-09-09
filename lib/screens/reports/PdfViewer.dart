@@ -7,8 +7,15 @@ class PdfViewer extends StatelessWidget{
 
   @override
   Widget build(BuildContext context) {
-    return  PDFViewerScaffold(
-            path: path,
+    return  WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pop();
+        Navigator.of(context).pop();
+        return false;
+      },
+      child: PDFViewerScaffold(
+              path: path,
+      ),
     );
   }
 

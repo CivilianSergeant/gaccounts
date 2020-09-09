@@ -28,9 +28,10 @@ class _VoucherScreenState extends State<VoucherScreen>{
 
                 if(!user.downloadVoucher){
 
-                  Navigator.of(context).pushNamed('/sync-download');
+                  Navigator.of(context).pushNamed('/sync-download',arguments: {"fetch":"load-voucher"});
+
                 }else{
-                  Navigator.of(context).pop();
+
                   Navigator.of(context).pushNamed('/voucher-entry');
                 }
               },

@@ -176,6 +176,23 @@ class AccTrxMasterService extends NetworkService{
     Database db = await masterRepo.getDBInstance();
     return await db.rawQuery(sql);
   }
+
+   Future<List<Map<String,dynamic>>> getVoucherSummary(String voucherType) async {
+
+     String sql = "SELECT atm.*, atd.narration, sum(atd.credit) as credit ,sum(atd.debit) as debit,ca.acc_code,ca.acc_name from ${masterRepo
+         .tableName} atm"
+         " JOIN ${detailRepository
+         .tableName} atd ON atd.trx_master_id = atm.trx_master_id"
+         " JOIN chart_accounts ca ON ca.acc_id = atd.acc_id  AND ca.group_id != 3 AND ca.is_selected=1 "
+         " WHERE atm.voucher_type LIKE '%${voucherType}%'"
+         " Group BY atm.voucher_type";
+
+     Database db = await masterRepo.getDBInstance();
+     return await db.rawQuery(sql);
+
+   }
+
+
   
   String _getPrevMonth(String startDate){
     DateTime dt = DateTime.parse(startDate);
@@ -183,6 +200,27 @@ class AccTrxMasterService extends NetworkService{
     month = (month<1)? 12 :month;
     String prevMonth = (month<10)? '0'+(month).toString() : (month).toString();
     return prevMonth;
+  }
+
+  String _getPrevMonthLastDate(String startDate){
+    String prevMonth = _getPrevMonth(startDate);
+    DateTime dt = DateTime.now();
+    int _prevMonth = int.parse(prevMonth);
+    String lastDate = "30";
+    switch(_prevMonth){
+      case 1:
+      case 3:
+      case 5:
+      case 7:
+      case 8:
+      case 10:
+      case 12:
+        lastDate="31";
+        break;
+    }
+    int year = (_prevMonth==12)? (dt.year-1) : (dt.year);
+    return "${year}-${prevMonth}-${lastDate}";
+
   }
 
   Future<Map<String,dynamic>> getAccountsBalance(String startDate, String endDate,{bool upToPrev}) async{
@@ -218,5 +256,37 @@ class AccTrxMasterService extends NetworkService{
     return {'current':currenResults,'prev':prevResults};
        // " AND atm.voucher_type in ('cash-purchase','cash-sale','received','payment','bank')";
   }
+
+   Future<Map<String,dynamic>> getBalanceSheet(String startDate) async{
+
+     String sql ="SELECT atm.*, SUM(atd.credit) as credit , SUM(atd.debit) debit,ca.acc_code from ${masterRepo.tableName} atm"
+         " JOIN ${detailRepository.tableName} atd ON atd.trx_master_id = atm.trx_master_id"
+         " JOIN chart_accounts ca ON ca.acc_id = atd.acc_id"
+         " WHERE strftime('%s',atm.trx_date) <= strftime('%s','${startDate}') "
+         " GROUP BY atd.acc_id";
+
+
+     String prevMonthLastDate = _getPrevMonthLastDate(startDate);
+     AppConfig.log(startDate,line:"161",className: "AccTrxMasterService");
+     AppConfig.log(prevMonthLastDate,line:"161",className: "AccTrxMasterService");
+
+     String sql1 ="SELECT atm.*, SUM(atd.credit) as credit , SUM(atd.debit) debit,ca.acc_code from ${masterRepo.tableName} atm"
+         " JOIN ${detailRepository.tableName} atd ON atd.trx_master_id = atm.trx_master_id"
+         " JOIN chart_accounts ca ON ca.acc_id = atd.acc_id";
+
+       sql1 += " WHERE strftime('%s',atm.trx_date) <= strftime('%s','${prevMonthLastDate}')";
+
+     sql1 +=   " GROUP BY atd.acc_id";
+
+     Database db = await masterRepo.getDBInstance();
+     List<Map<String,dynamic>> currenResults =  await db.rawQuery(sql);
+     List<Map<String,dynamic>> prevResults = await db.rawQuery(sql1);
+
+     currenResults.forEach((element) {
+//      AppConfig.log(element,line:"161",className: "AccTrxMasterService");
+     });
+     return {'current':currenResults,'prev':prevResults};
+     // " AND atm.voucher_type in ('cash-purchase','cash-sale','received','payment','bank')";
+   }
 
 }

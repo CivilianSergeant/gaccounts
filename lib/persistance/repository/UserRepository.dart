@@ -4,6 +4,7 @@ import 'package:gaccounts/persistance/entity/Profile.dart';
 import 'package:gaccounts/persistance/entity/User.dart';
 import 'package:gaccounts/persistance/interfaces/Repository.dart';
 import 'package:gaccounts/persistance/repository/BaseRepository.dart';
+import 'package:gaccounts/persistance/tables/ProfilesTable.dart';
 import 'package:gaccounts/persistance/tables/UsersTable.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -19,6 +20,12 @@ class UserRepository extends BaseRepository{
   Future<User> findById(int id) async{
     dynamic map = super.findById(id);
     return (map !=null)? User.fromJSON(map) : null;
+  }
+
+  Future<Map<String,dynamic>> getProfile(int id) async{
+    Database db = await getDBInstance();
+    List<Map<String,dynamic>> maps = await db.query(ProfilesTable().tableName,where: "profile_id=?",whereArgs: [id]);
+    return (maps.length>0)? maps.first : null;
   }
 
   @override

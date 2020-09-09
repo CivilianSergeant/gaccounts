@@ -12,6 +12,7 @@ import 'package:gaccounts/persistance/repository/UserRepository.dart';
 import 'package:gaccounts/persistance/services/AccTrxMasterService.dart';
 import 'package:gaccounts/persistance/services/UserService.dart';
 import 'package:gaccounts/screens/reports/PdfViewer.dart';
+import 'package:gaccounts/widgets/TextFieldExt.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -41,9 +42,20 @@ class _CashBookReportState extends State<CashBookReport>{
   double totalBankPayment = 0;
   List<pw.TableRow> cashBooks = [];
   User user;
+  Map<String,dynamic> profile;
+
   final pdf = pw.Document();
 
+  int fromStartYear;
+  int fromEndYear;
+  DateTime fromDay;
+  DateTime fromInitial;
+
+  TextEditingController fromDate = TextEditingController();
+
   Future<void> generatePDf() async{
+
+    await GenerateRow();
 
     pdf.addPage(
       
@@ -51,15 +63,27 @@ class _CashBookReportState extends State<CashBookReport>{
         margin: pw.EdgeInsets.all(10),
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context){
-          GenerateRow();
+
           return <pw.Widget>[
             pw.SizedBox(height: 40),
+            pw.Container(
+                alignment: pw.Alignment.center,
+                child: pw.Text("gAccounts",style: pw.TextStyle(
+                    fontSize: 20,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColor.fromHex(("0e4b61"))
+                ))
+            ),
             pw.Row(
               children: [
+
                 pw.Column(
+                  mainAxisAlignment: pw.MainAxisAlignment.start,
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text("${user.username}"),
-                    pw.Text("Date: "+DateFormat("yyyy-MM-dd").format(DateTime.now()))
+                    pw.Text("${profile['name']}"),
+                    pw.Text("Contact No:${user.username}"),
+                    pw.Text("Date: ${fromDate.text}")
                   ]
                 )
               ]
@@ -78,7 +102,8 @@ class _CashBookReportState extends State<CashBookReport>{
       ));
 
     String dirPath = (await getExternalStorageDirectory()).path;
-    String filename = '${dirPath}/cashbook.pdf';
+    DateTime dt = DateTime.now();
+    String filename = '${dirPath}/cashbook-${formatter.format(dt)}-${dt.hour}-${dt.minute}-${dt.second}.pdf';
     AppConfig.log(filename);
     File f = File(filename);
     f.writeAsBytesSync(pdf.save());
@@ -91,7 +116,7 @@ class _CashBookReportState extends State<CashBookReport>{
     );
   }
 
-  GenerateRow(){
+  Future<void> GenerateRow() async{
     cashBooks.add(PdfRow());
     cashBooks.add(PdfRowData(CashBook(
       voucherNo: "",
@@ -363,6 +388,36 @@ class _CashBookReportState extends State<CashBookReport>{
         child: SingleChildScrollView(
           child:Column(
             children: <Widget>[
+              TextFieldExt(
+                  hintText: "From Date",
+                  icon: Icons.date_range,
+                  controller: fromDate,
+                  readonly: true,
+                  borderRadius: 20,
+                  topPad: 15,
+                  onTap:(){
+                    showDatePicker(context: context, initialDate:fromInitial , firstDate: DateTime(fromStartYear), lastDate: DateTime(fromEndYear))
+                        .then((date){
+                      if(date != null){
+                        fromDate.text = (date.toString().substring(0,11).trim());
+                        loadCashBook();
+                        setState(() {
+                          fromInitial = DateTime.parse(fromDate.text);
+                        });
+                        //                             getAgeInWords();
+                      }else{
+                        DateTime dt = DateTime.now();
+                        String _date = formatter.format(dt);
+                        setState(() {
+                          fromInitial = dt;
+                        });
+                        fromDate.text= _date;
+                        loadCashBook();
+                      }
+                    });
+                  }
+              ),
+               SizedBox(height:10,),
                SectionCaption("Cash"),
                Title(),
                OpeningBalance(cashOpeningBalance),
@@ -757,6 +812,13 @@ class _CashBookReportState extends State<CashBookReport>{
 
   @override
   void initState() {
+
+    fromDay = DateTime.now();
+    fromStartYear = (fromDay.year);
+    fromEndYear = (fromDay.year+10);
+    fromInitial = DateTime.now();
+    fromDate.text = formatter.format(fromInitial);
+
     loadCashBook();
   }
 
@@ -776,9 +838,13 @@ class _CashBookReportState extends State<CashBookReport>{
   }
 
   Future<void> loadCashBook() async {
-    String toDate = formatter.format(today);
+
+
+
+    String toDate = fromDate.text; //formatter.format(today);
     UserService userService = UserService(userRepo: UserRepository());
     user = await userService.checkCurrentUser();
+    profile = await userService.getProfile(user.profileId);
     AccTrxMasterService accTrxMasterService = AccTrxMasterService(masterRepo: AccTrxMasterRepository());
     double _openingBalance = await accTrxMasterService.getOpeningBalance('ca', toDate);
     double _bankOpeningBalance = await accTrxMasterService.getOpeningBalance('bc', toDate);

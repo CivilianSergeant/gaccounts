@@ -37,13 +37,15 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
   DateTime toDay;
   DateTime toInitial;
 
-//  TextEditingController fromDate = TextEditingController();
+  TextEditingController fromDate = TextEditingController();
 //  TextEditingController toDate = TextEditingController();
 
-  String fromDate="";
+//  String fromDate="";
   String toDate = "";
 
   User user;
+
+  Map<String,dynamic> profile;
 
   final pdf = pw.Document();
   List<pw.TableRow> rows = [];
@@ -66,9 +68,11 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
   Future<void> loadInfo() async{
     UserService userService = UserService(userRepo: UserRepository());
     User _user = await userService.checkCurrentUser();
+    Map<String,dynamic> _profile = await userService.getProfile(_user.profileId);
     if(mounted) {
       setState(() {
         user = _user;
+        profile = _profile;
       });
     }
   }
@@ -86,6 +90,29 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
             alignment: Alignment.topCenter,
             child: Column(
               children: <Widget>[
+                TextFieldExt(
+                    hintText: "From Date",
+                    icon: Icons.date_range,
+                    controller: fromDate,
+                    readonly: true,
+                    borderRadius: 20,
+                    topPad: 15,
+                    onTap:(){
+                      showDatePicker(context: context, initialDate:fromInitial , firstDate: DateTime(fromStartYear), lastDate: DateTime(fromEndYear))
+                          .then((date){
+                        if(date != null){
+                          fromDate.text = (date.toString().substring(0,11).trim());
+
+                          setState(() {
+                            fromInitial = DateTime.parse(fromDate.text);
+                          });
+                          //                             getAgeInWords();
+                        }else{
+                          fromDate.text="";
+                        }
+                      });
+                    }
+                ),
                 SizedBox(height: 20,),
                 ActionButton(
                   width: MediaQuery.of(context).size.width-40,
@@ -117,12 +144,12 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
           pw.Container(
               width: 60,
               alignment: pw.Alignment.centerRight,
-              child: pw.Text("Cur. Amount")
+              child: pw.Text("Cur. Month")
           ),
           pw.Container(
               width: 60,
               alignment: pw.Alignment.centerRight,
-              child: pw.Text("Prv. Amount")
+              child: pw.Text("Prv. Month")
           ),
         ]
     );
@@ -484,7 +511,7 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
 
   Future<void> GenerateRow() async{
 
-    FindDate();
+//    FindDate();
 
     ChartAccountService chartAccService = ChartAccountService(repo: ChartAccountRepository());
     AccTrxMasterService masterService = AccTrxMasterService(masterRepo: AccTrxMasterRepository());
@@ -497,7 +524,7 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
     List<Map<String,dynamic>> liabilitySecondAccounts = await chartAccService.getLiabilitySecondLevelAccounts();
     List<Map<String,dynamic>> liabilityThirdAccounts = await chartAccService.getLiabilityThirdLevelAccounts();
 
-    Map<String,dynamic> results = await masterService.getAccountsBalance(fromDate, toDate,upToPrev: true);
+    Map<String,dynamic> results = await masterService.getBalanceSheet(fromDate.text);
     List<Map<String,dynamic>> currentResults = results['current'];
     List<Map<String,dynamic>> prevResults = results['prev'];
 
@@ -558,13 +585,13 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
   FindDate(){
     DateTime dt = DateTime.now();
     int month = dt.month;
-    if(month<7){
-        fromDate = "${(dt.year-1)}-07-01";
-        toDate = "${dt.year}-06-30";
-    }else{
-       fromDate = "${dt.year}-07-01";
-       toDate = "${dt.year+1}-06-30";
-    }
+//    if(month<7){
+//        fromDate = "${(dt.year-1)}-07-01";
+//        toDate = "${dt.year}-06-30";
+//    }else{
+//       fromDate = "${dt.year}-07-01";
+//       toDate = "${dt.year+1}-06-30";
+//    }
   }
 
   Future<void> GenerateReport() async{
@@ -578,14 +605,24 @@ class _BalanceSheetReportState extends State<BalanceSheetReport>{
 
           return <pw.Widget>[
             pw.SizedBox(height: 40),
+            pw.Container(
+                alignment: pw.Alignment.center,
+                child: pw.Text("gAccounts",style: pw.TextStyle(
+                    fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColor.fromHex(("0e4b61"))
+                ))
+            ),
             pw.Row(
                 children: [
+
                   pw.Column(
                       mainAxisAlignment: pw.MainAxisAlignment.start,
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text("${user.username}"),
-                        pw.Text("Date: From ${fromDate} to ${toDate}")
+                        pw.Text("${profile['name']}"),
+                        pw.Text("Contact No: ${user.username}"),
+                        pw.Text("Date: as on ${fromDate.text}")
                       ]
                   )
                 ]

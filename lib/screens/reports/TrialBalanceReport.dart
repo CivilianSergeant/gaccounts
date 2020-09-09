@@ -47,6 +47,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
   StreamController<int> buttonPressed = StreamController<int>.broadcast();
 
   User user;
+  Map<String,dynamic> profile;
 
   final pdf = pw.Document();
   List<pw.TableRow> rows = [];
@@ -69,10 +70,12 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
   Future<void> loadAccInfo() async{
     UserService userService = UserService(userRepo: UserRepository());
     User _user = await userService.checkCurrentUser();
+    Map<String,dynamic> _profile = await userService.getProfile(_user.profileId);
 //    GenerateRow();
     if(mounted) {
       setState(() {
         user = _user;
+        profile = _profile;
       });
     }
   }
@@ -181,7 +184,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
                     children: [
                       pw.Container(
                         width:70,
-                        child: pw.Text("Received"),
+                        child: pw.Text("Debit"),
                         padding:pw.EdgeInsets.only(right: 5),
                         alignment: pw.Alignment.centerRight,
                         decoration: pw.BoxDecoration(
@@ -192,7 +195,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
                           width: 70,
                           padding:pw.EdgeInsets.only(right: 10) ,
 
-                          child: pw.Text("Payment"),
+                          child: pw.Text("Credit"),
                           alignment: pw.Alignment.centerRight,
                           decoration: pw.BoxDecoration(
                               border: pw.BoxBorder(
@@ -223,7 +226,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
                           pw.Container(
                             width:70,
                               padding:pw.EdgeInsets.only(right: 5),
-                              child: pw.Text("Received"),
+                              child: pw.Text("Debit"),
                               alignment: pw.Alignment.centerRight,
                               decoration: pw.BoxDecoration(
                                   border: pw.BoxBorder(right: true,top:true)
@@ -231,7 +234,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
                           ),
                           pw.Container(
                             width:70,
-                              child: pw.Text("Payment"),
+                              child: pw.Text("Credit"),
                               padding:pw.EdgeInsets.only(right: 10),
                               alignment: pw.Alignment.centerRight,
                               decoration: pw.BoxDecoration(
@@ -263,7 +266,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
                         children: [
                           pw.Container(
                             width:70,
-                              child: pw.Text("Received"),
+                              child: pw.Text("Debit"),
                               padding:pw.EdgeInsets.only(right: 5),
                               alignment: pw.Alignment.centerRight,
                               decoration: pw.BoxDecoration(
@@ -272,7 +275,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
                           ),
                           pw.Container(
                             width: 70,
-                            child: pw.Text("Payment"),
+                            child: pw.Text("Credit"),
                             padding:pw.EdgeInsets.only(right: 10),
                             alignment: pw.Alignment.centerRight,
                             decoration: pw.BoxDecoration(
@@ -379,22 +382,22 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
                         children: [
                           pw.Container(
                               width:70,
-                              child: pw.Text("${item.prev.received}",style: pw.TextStyle(
-                                  fontWeight: (item.isBold!=null && item.isBold)? pw.FontWeight.bold :pw.FontWeight.normal
-                              )),
-                              padding:pw.EdgeInsets.only(right: 5),
-                              alignment: pw.Alignment.centerRight,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.BoxBorder(left: true,top:true,right: true)
-                              )
-                          ),
-                          pw.Container(
-                              width: 70,
-                              padding:pw.EdgeInsets.only(right: 10) ,
-
                               child: pw.Text("${item.prev.payment}",style: pw.TextStyle(
                                   fontWeight: (item.isBold!=null && item.isBold)? pw.FontWeight.bold :pw.FontWeight.normal
                               )),
+                              padding:pw.EdgeInsets.only(right: 5),
+                              alignment: pw.Alignment.centerRight,
+                              decoration: pw.BoxDecoration(
+                                  border: pw.BoxBorder(left: true,top:true,right: true)
+                              )
+                          ),
+                          pw.Container(
+                              width: 70,
+                              padding:pw.EdgeInsets.only(right: 10) ,
+
+                              child: pw.Text("${item.prev.received}",style: pw.TextStyle(
+                                  fontWeight: (item.isBold!=null && item.isBold)? pw.FontWeight.bold :pw.FontWeight.normal
+                              )),
                               alignment: pw.Alignment.centerRight,
                               decoration: pw.BoxDecoration(
                                   border: pw.BoxBorder(
@@ -423,22 +426,22 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
                         children: [
                           pw.Container(
                               width:70,
-                              child: pw.Text("${item.current.received}",style: pw.TextStyle(
-                                  fontWeight: (item.isBold!=null && item.isBold)? pw.FontWeight.bold :pw.FontWeight.normal
-                              )),
-                              padding:pw.EdgeInsets.only(right: 5),
-                              alignment: pw.Alignment.centerRight,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.BoxBorder(left: true,top:true,right: true)
-                              )
-                          ),
-                          pw.Container(
-                              width: 70,
-                              padding:pw.EdgeInsets.only(right: 10) ,
-
                               child: pw.Text("${item.current.payment}",style: pw.TextStyle(
                                   fontWeight: (item.isBold!=null && item.isBold)? pw.FontWeight.bold :pw.FontWeight.normal
                               )),
+                              padding:pw.EdgeInsets.only(right: 5),
+                              alignment: pw.Alignment.centerRight,
+                              decoration: pw.BoxDecoration(
+                                  border: pw.BoxBorder(left: true,top:true,right: true)
+                              )
+                          ),
+                          pw.Container(
+                              width: 70,
+                              padding:pw.EdgeInsets.only(right: 10) ,
+
+                              child: pw.Text("${item.current.received}",style: pw.TextStyle(
+                                  fontWeight: (item.isBold!=null && item.isBold)? pw.FontWeight.bold :pw.FontWeight.normal
+                              )),
                               alignment: pw.Alignment.centerRight,
                               decoration: pw.BoxDecoration(
                                   border: pw.BoxBorder(
@@ -467,7 +470,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
                         children: [
                           pw.Container(
                               width:70,
-                              child: pw.Text("${item.balance.received}",style: pw.TextStyle(
+                              child: pw.Text("${item.balance.payment}",style: pw.TextStyle(
                                   fontWeight: (item.isBold!=null && item.isBold)? pw.FontWeight.bold :pw.FontWeight.normal
                               )),
                               padding:pw.EdgeInsets.only(right: 5),
@@ -480,7 +483,7 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
                               width: 70,
                               padding:pw.EdgeInsets.only(right: 10) ,
 
-                              child: pw.Text("${item.balance.payment}",style: pw.TextStyle(
+                              child: pw.Text("${item.balance.received}",style: pw.TextStyle(
                                   fontWeight: (item.isBold!=null && item.isBold)? pw.FontWeight.bold :pw.FontWeight.normal
                               )),
                               alignment: pw.Alignment.centerRight,
@@ -634,13 +637,22 @@ class _TrialBalanceReportState extends State<TrialBalanceReport>{
 
           return <pw.Widget>[
             pw.SizedBox(height: 40),
+            pw.Container(
+                alignment: pw.Alignment.center,
+                child: pw.Text("gAccounts",style: pw.TextStyle(
+                    fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColor.fromHex(("0e4b61"))
+                ))
+            ),
             pw.Row(
                 children: [
                   pw.Column(
                       mainAxisAlignment: pw.MainAxisAlignment.start,
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text("${user.username}"),
+                        pw.Text("${profile['name']}"),
+                        pw.Text("Contact No: ${user.username}"),
                         pw.Text("Date: "+fromDate.text+" - "+toDate.text)
                       ]
                   )

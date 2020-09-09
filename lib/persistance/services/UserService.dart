@@ -24,6 +24,11 @@ class UserService extends NetworkService{
     return user;
   }
 
+  Future<Map<String,dynamic>> getProfile(int profileId) async {
+    return userRepo.getProfile(profileId);
+  }
+
+
   Future<User> findUserByIMEI(String imei) async {
     return await userRepo.find(where: "imei=?",whereArgs: [imei],firstOnly: true);
   }

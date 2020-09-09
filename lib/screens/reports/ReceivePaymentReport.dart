@@ -41,6 +41,8 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
   TextEditingController toDate = TextEditingController();
 
   User user;
+  Map<String,dynamic> profile;
+
 
   final pdf = pw.Document();
   List<pw.TableRow> rows = [];
@@ -63,9 +65,11 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
   Future<void> loadInfo() async{
     UserService userService = UserService(userRepo: UserRepository());
     User _user = await userService.checkCurrentUser();
+    Map<String,dynamic> _profile = await userService.getProfile(_user.profileId);
     if(mounted) {
       setState(() {
         user = _user;
+        profile = _profile;
       });
     }
   }
@@ -539,13 +543,22 @@ class _ReceivePaymentReportState extends State<ReceivePaymentReport>{
 
           return <pw.Widget>[
             pw.SizedBox(height: 40),
+            pw.Container(
+                alignment: pw.Alignment.center,
+                child: pw.Text("gAccounts",style: pw.TextStyle(
+                    fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColor.fromHex(("0e4b61"))
+                ))
+            ),
             pw.Row(
                 children: [
                   pw.Column(
                       mainAxisAlignment: pw.MainAxisAlignment.start,
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text("${user.username}"),
+                        pw.Text("${profile['name']}"),
+                        pw.Text("Contact No: ${user.username}"),
                         pw.Text("Date: "+fromDate.text+" - "+toDate.text)
                       ]
                   )
